@@ -14,6 +14,7 @@ Named Arguments
                                       to propagate before asking the ACME
                                       server to verify the DNS record.
                                       (Default: 60)
+``--dns-rfc2136-zone``                Name of DNS zone to update
 ===================================== =====================================
 
 

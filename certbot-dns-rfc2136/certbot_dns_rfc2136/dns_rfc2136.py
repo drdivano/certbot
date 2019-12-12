@@ -49,6 +49,7 @@ class Authenticator(dns_common.DNSAuthenticator):
     def add_parser_arguments(cls, add):  # pylint: disable=arguments-differ
         super(Authenticator, cls).add_parser_arguments(add, default_propagation_seconds=60)
         add('credentials', help='RFC 2136 credentials INI file.')
+        add('zone', help='Name of DNS zone to update.')
 
     def more_info(self):  # pylint: disable=missing-docstring,no-self-use
         return 'This plugin configures a DNS TXT record to respond to a dns-01 challenge using ' + \
@@ -67,7 +68,7 @@ class Authenticator(dns_common.DNSAuthenticator):
             {
                 'name': 'TSIG key name',
                 'secret': 'TSIG key secret',
-                'server': 'The target DNS server'
+                'server': 'The target DNS server',
             },
             self._validate_algorithm
         )
@@ -84,20 +85,23 @@ class Authenticator(dns_common.DNSAuthenticator):
                               self.credentials.conf('name'),
                               self.credentials.conf('secret'),
                               self.ALGORITHMS.get(self.credentials.conf('algorithm'),
-                                                  dns.tsig.HMAC_MD5))
+                                                  dns.tsig.HMAC_MD5),
+                              self.conf('zone'))
+
 
 
 class _RFC2136Client(object):
     """
     Encapsulates all communication with the target DNS server.
     """
-    def __init__(self, server, port, key_name, key_secret, key_algorithm):
+    def __init__(self, server, port, key_name, key_secret, key_algorithm, zone):
         self.server = server
         self.port = port
         self.keyring = dns.tsigkeyring.from_text({
             key_name: key_secret
         })
         self.algorithm = key_algorithm
+        self.zone = zone
 
     def add_txt_record(self, record_name, record_content, record_ttl):
         """
@@ -178,6 +182,9 @@ class _RFC2136Client(object):
         :rtype: str
         :raises certbot.errors.PluginError: if no SOA record can be found.
         """
+
+        if self.zone:
+            return self.zone
 
         domain_name_guesses = dns_common.base_domain_name_guesses(record_name)
 
